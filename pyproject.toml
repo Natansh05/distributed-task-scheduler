@@ -1,0 +1,9 @@
+[project]
+name = "distributed-task-scheduler"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.140.8",
+    "uvicorn[standard]>=0.51.0",
+]

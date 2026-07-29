@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# SQLite
+*.db
+*.db-wal
+*.db-shm
+
+# Env
+.env
+
+# Phase progress notes (not meant to be committed)
+phase*.md
+
+# Editor/OS
+.DS_Store
+.vscode/
+.idea/
