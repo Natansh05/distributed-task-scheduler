@@ -60,6 +60,7 @@ def get_or_create_job(name: str, interval_seconds: float) -> int:
 def record_job_run(job_id: int, ran_at: str, node_id: str, fencing_token: int | None) -> None:
     conn = get_connection()
     try:
+        conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
             "SELECT highest_fencing_token_seen FROM leader_state WHERE id = 1"
         ).fetchone()
