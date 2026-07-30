@@ -5,8 +5,7 @@ from fastapi import FastAPI
 from app.config import NODE_ID
 from app.db import init_db
 from app.jobs import job_loop
-from app.election import LeaderElector
-
+from app.election import LeaderElector, election_loop
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
 leader_elector = LeaderElector()
@@ -15,21 +14,18 @@ leader_elector = LeaderElector()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    elected = await leader_elector.try_acquire()
-    task = None
-    if elected:
-        logging.info("Node %s is the leader", NODE_ID)
-        task = asyncio.create_task(job_loop(leader_elector))
+    task = asyncio.create_task(job_loop(leader_elector))
+    election_task = asyncio.create_task(election_loop(leader_elector))
     try:
         yield
     finally:
-        if task is not None:
-            task.cancel()
+        task.cancel()
+        election_task.cancel()
+        for t in (task, election_task):
             try:
-                await task
+                await t
             except asyncio.CancelledError:
                 pass
-
 
 app = FastAPI(lifespan=lifespan)
 
