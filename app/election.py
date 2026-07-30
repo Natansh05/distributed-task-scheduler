@@ -8,6 +8,7 @@ r = redis.from_url(REDIS_URL, decode_responses=True)
 logger = logging.getLogger("scheduler.election")
 
 LEADER_KEY = "leader:lock"
+FENCING_TOKEN_KEY = "leader:fencing_token"
 
 RENEW_SCRIPT = """
 if redis.call("GET", KEYS[1]) == ARGV[1] then
@@ -17,21 +18,33 @@ else
 end
 """
 
+ACQUIRE_SCRIPT = """
+if redis.call("SET", KEYS[1], ARGV[1], "NX", "EX", ARGV[2]) then
+    return redis.call("INCR", KEYS[2])
+else
+    return nil
+end
+"""
+
 renew_script = r.register_script(RENEW_SCRIPT)
+acquire_script = r.register_script(ACQUIRE_SCRIPT)
 
 class LeaderElector:
     def __init__(self):
         self.r = r
         self.renew_script = renew_script
+        self.acquire_script = acquire_script
+        self.current_token = None
 
-    async def try_acquire(self)-> bool:
+    async def try_acquire(self)-> int | None:
         """
         Try to acquire the leadership lock.
-        Returns True if the lock was acquired, False otherwise.
+        Returns the fencing token if the lock was acquired, None otherwise.
         """
 
-        result = await self.r.set(LEADER_KEY, NODE_ID, nx=True, ex=LEASE_TTL_SECONDS)
-        return bool(result)
+        result = await self.acquire_script(keys=[LEADER_KEY, FENCING_TOKEN_KEY], args=[NODE_ID, LEASE_TTL_SECONDS])
+        self.current_token = result
+        return result
 
     async def am_i_leader(self) -> bool:
         """
@@ -58,7 +71,7 @@ async def election_loop(elector: LeaderElector):
             logger.info("Failed to renew leadership lock.")
             acquired = await elector.try_acquire()
             if acquired:
-                logger.info("Leadership lock acquired by node %s.", NODE_ID)
+                logger.info("Leadership lock acquired by node %s with token %d", NODE_ID, elector.current_token)
             else:
                 logger.info("Failed to acquire leadership lock.")
         await asyncio.sleep(RENEW_INTERVAL_SECONDS)

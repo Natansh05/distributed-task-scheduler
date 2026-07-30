@@ -60,9 +60,23 @@ def get_or_create_job(name: str, interval_seconds: float) -> int:
 def record_job_run(job_id: int, ran_at: str, node_id: str, fencing_token: int | None) -> None:
     conn = get_connection()
     try:
+        row = conn.execute(
+            "SELECT highest_fencing_token_seen FROM leader_state WHERE id = 1"
+        ).fetchone()
+        highest_token_seen = row[0]
+
+        if fencing_token is None or fencing_token < highest_token_seen:
+            raise ValueError(
+                f"Rejected stale write: token {fencing_token} < highest seen {highest_token_seen}"
+            )
+
         conn.execute(
             "INSERT INTO job_runs (job_id, ran_at, node_id, fencing_token) VALUES (?, ?, ?, ?)",
             (job_id, ran_at, node_id, fencing_token),
+        )
+        conn.execute(
+            "UPDATE leader_state SET highest_fencing_token_seen = ? WHERE id = 1",
+            (fencing_token,),
         )
         conn.commit()
     finally:

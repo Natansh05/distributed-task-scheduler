@@ -17,7 +17,10 @@ async def job_loop(leader_elector: LeaderElector) -> None:
         await asyncio.sleep(JOB_INTERVAL_SECONDS)
         ran_at = datetime.now(UTC).isoformat()
         if await leader_elector.am_i_leader():
-            record_job_run(job_id, ran_at, NODE_ID, fencing_token=None)
-            logger.info("job_run job=%s node=%s at=%s", JOB_NAME, NODE_ID, ran_at)
+            try:
+                record_job_run(job_id, ran_at, NODE_ID, fencing_token=leader_elector.current_token)
+                logger.info("job_run job=%s node=%s at=%s", JOB_NAME, NODE_ID, ran_at)
+            except ValueError as e:
+                logger.warning("Rejected job write: %s", e)
         else:
             logger.info("Node %s is not the leader, skipping job run at %s", NODE_ID, ran_at)
