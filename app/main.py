@@ -5,9 +5,10 @@ from fastapi import FastAPI
 from app.config import NODE_ID
 from app.db import init_db
 from app.jobs import job_loop
-from app.election import LeaderElector, election_loop, LEADER_KEY
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+from app.election import LeaderElector, election_loop
 from app.schemas import StatusResponse
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
 leader_elector = LeaderElector()
 
@@ -38,7 +39,7 @@ def root():
 @app.get("/status", response_model=StatusResponse)
 async def status():
     current_leader = await leader_elector.get_current_leader()
-    is_leader = await leader_elector.am_i_leader()
+    is_leader = current_leader == NODE_ID
     current_token = leader_elector.current_token if is_leader else None
     lease_ttl_remaining = await leader_elector.get_ttl_left()
 
