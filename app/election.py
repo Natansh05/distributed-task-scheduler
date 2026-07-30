@@ -62,6 +62,21 @@ class LeaderElector:
         result = await self.renew_script(keys=[LEADER_KEY], args=[NODE_ID, LEASE_TTL_SECONDS])
         return bool(result)
 
+    async def get_ttl_left(self) -> int | None:
+        """
+        Get the remaining TTL of the leadership lock.
+        Returns the remaining TTL in seconds if the current node is the leader, None otherwise.
+        """
+        ttl = await self.r.ttl(LEADER_KEY)
+        return ttl if ttl>=0 else None
+
+    async def get_current_leader(self) -> str | None:
+        """
+        Get the current leader's node ID.
+        Returns the node ID of the current leader, or None if there is no leader.
+        """
+        return await self.r.get(LEADER_KEY)
+
 async def election_loop(elector: LeaderElector):
     while True:
         renewed = await elector.renew()
