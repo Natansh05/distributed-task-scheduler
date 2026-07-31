@@ -3,6 +3,11 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
 
   node-1:
     build: .
@@ -15,7 +20,8 @@ services:
     volumes:
       - scheduler-data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   node-2:
     build: .
@@ -28,7 +34,8 @@ services:
     volumes:
       - scheduler-data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
   node-3:
     build: .
@@ -41,7 +48,8 @@ services:
     volumes:
       - scheduler-data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
 
 volumes:
   scheduler-data:
