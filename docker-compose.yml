@@ -3,3 +3,45 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  node-1:
+    build: .
+    environment:
+      - NODE_ID=node-1
+      - REDIS_URL=redis://redis:6379/0
+      - DB_PATH=/app/data/scheduler.db
+    ports:
+      - "8001:8000"
+    volumes:
+      - scheduler-data:/app/data
+    depends_on:
+      - redis
+
+  node-2:
+    build: .
+    environment:
+      - NODE_ID=node-2
+      - REDIS_URL=redis://redis:6379/0
+      - DB_PATH=/app/data/scheduler.db
+    ports:
+      - "8002:8000"
+    volumes:
+      - scheduler-data:/app/data
+    depends_on:
+      - redis
+
+  node-3:
+    build: .
+    environment:
+      - NODE_ID=node-3
+      - REDIS_URL=redis://redis:6379/0
+      - DB_PATH=/app/data/scheduler.db
+    ports:
+      - "8003:8000"
+    volumes:
+      - scheduler-data:/app/data
+    depends_on:
+      - redis
+
+volumes:
+  scheduler-data:
